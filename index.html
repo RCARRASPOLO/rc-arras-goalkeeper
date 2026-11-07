@@ -1,0 +1,147 @@
+
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>RC Arras Goalkeeper</title>
+<style>
+body{font-family:Arial,sans-serif;background:#edf3f8;color:#14283b;margin:0;padding:15px}
+header{background:#123e65;color:white;padding:18px;border-radius:12px;text-align:center}
+h1{font-size:21px;margin:0}
+section{background:white;border-radius:12px;padding:15px;margin-top:14px}
+button,input,select{font-size:16px;padding:12px;border-radius:8px;border:1px solid #b7c6d3}
+button{background:#176a9b;color:white;cursor:pointer}
+button:active{opacity:.7}
+.grid{display:grid;grid-template-columns:repeat(3,1fr);gap:5px}
+.zone{height:65px;background:#dcecf5;color:#123e65;font-weight:bold}
+.selected{background:#146b9c;color:white}
+.actions{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.actions button{font-weight:bold}
+.stats{display:flex;justify-content:space-around;text-align:center}
+.stats strong{font-size:26px}
+small{color:#657789}
+</style>
+</head>
+<body>
+<header>
+<h1>RC ARRAS WATER-POLO</h1>
+<div>Goalkeeper Analytics</div>
+</header>
+
+<section>
+<h3>Match</h3>
+<input id="opponent" placeholder="Adversaire">
+<input id="keeper" placeholder="Gardien">
+<select id="period">
+<option value="1">Période 1</option>
+<option value="2">Période 2</option>
+<option value="3">Période 3</option>
+<option value="4">Période 4</option>
+</select>
+</section>
+
+<section>
+<h3>Statistiques</h3>
+<div class="stats">
+<div><strong id="saves">0</strong><br>Arrêts</div>
+<div><strong id="goals">0</strong><br>Buts</div>
+<div><strong id="percent">—</strong><br>% arrêts</div>
+</div>
+</section>
+
+<section>
+<h3>Zone du tir</h3>
+<div class="grid" id="zones"></div>
+<small>Vue du gardien face au terrain</small>
+</section>
+
+<section>
+<h3>Résultat du tir</h3>
+<div class="actions">
+<button onclick="record('save')">🧤 ARRÊT</button>
+<button onclick="record('goal')">🥅 BUT</button>
+<button onclick="record('post')">POTEAU</button>
+<button onclick="record('miss')">HORS CADRE</button>
+</div>
+</section>
+
+<section>
+<h3>Historique</h3>
+<div id="history"></div>
+<button onclick="undo()">Annuler dernier tir</button>
+</section>
+<script>
+let events = JSON.parse(localStorage.getItem("arras_events") || "[]");
+let selectedZone = 0;
+
+const zoneNames = [
+  "Haut gauche","Haut centre","Haut droite",
+  "Milieu gauche","Milieu centre","Milieu droite",
+  "Bas gauche","Bas centre","Bas droite"
+];
+
+function drawZones() {
+  const box = document.getElementById("zones");
+  box.innerHTML = "";
+  zoneNames.forEach((name, i) => {
+    const btn = document.createElement("button");
+    btn.textContent = name;
+    btn.className = "zone" + (i === selectedZone ? " selected" : "");
+    btn.onclick = () => {
+      selectedZone = i;
+      drawZones();
+    };
+    box.appendChild(btn);
+  });
+}
+
+function record(result) {
+  const event = {
+    opponent: document.getElementById("opponent").value,
+    keeper: document.getElementById("keeper").value,
+    period: document.getElementById("period").value,
+    zone: selectedZone,
+    result: result,
+    time: new Date().toISOString()
+  };
+  events.push(event);
+  save();
+}
+
+function save() {
+  localStorage.setItem("arras_events", JSON.stringify(events));
+  update();
+}
+
+function undo() {
+  if (!events.length) return;
+  if (confirm("Annuler le dernier tir ?")) {
+    events.pop();
+    save();
+  }
+}
+
+function update() {
+  const saves = events.filter(e => e.result === "save").length;
+  const goals = events.filter(e => e.result === "goal").length;
+  const shots = saves + goals;
+
+  document.getElementById("saves").textContent = saves;
+  document.getElementById("goals").textContent = goals;
+  document.getElementById("percent").textContent =
+    shots ? (100 * saves / shots).toFixed(1) + "%" : "—";
+
+  document.getElementById("history").innerHTML =
+    events.slice(-10).reverse().map(e =>
+      "<p>" + e.period + " | " +
+      zoneNames[e.zone] + " | " +
+      e.result + "</p>"
+    ).join("");
+}
+
+drawZones();
+update();
+</script>
+</body>
+</html>
